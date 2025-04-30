@@ -87,9 +87,9 @@ List all non-countries.
 ## (skills: select, where)
 
 run_sql_and_return_html(cnx,"""
-SELECT *
-FROM world_bank_data.wdi_country
-WHERE country_region = 'Aggregates';
+SELECT name
+FROM wdi_country
+WHERE NOT is_country;
 """)
 
 ```
@@ -116,10 +116,10 @@ DROP TABLE IF EXISTS wdi_country;
 ```{python}
 # create table
 execute_ddl(cnx,"""
-CREATE TABLE wdi_country AS
+CREATE TABLE country_copy AS
 SELECT *
-FROM world_bank_data.wdi_country
-WHERE country_region != 'Aggregates';
+FROM wdi_country
+WHERE is_country;
 """)
 
 ```
@@ -141,8 +141,7 @@ According to the World Bank, in 2020 there were how many countries in the world?
 ## (skills: select, aggregate)
 
 run_sql_and_return_html(cnx,"""
-SELECT COUNT(*) AS "Number of Countries"
-FROM wdi_country;
+SELECT COUNT(*) FROM country_copy;
 """)
 
 ```
@@ -159,9 +158,9 @@ What are all unique values of region in the wdi_country table?
 ## (skills: select, aggregate, order by)
 
 run_sql_and_return_html(cnx,"""
-SELECT DISTINCT country_region
-FROM wdi_country
-ORDER BY country_region;
+SELECT DISTINCT region
+FROM country_copy
+ORDER BY region;
 """)
 
 ```
@@ -224,10 +223,9 @@ WHERE country_short_name = 'Qatar';
 ## (skills: select, where, order by)
 
 run_sql_and_return_html(cnx,"""
-SELECT country_code, country_short_name, country_abbr, country_wb_abbr, country_region
-FROM wdi_country
-WHERE country_abbr != country_wb_abbr
-ORDER BY country_short_name;
+SELECT name, iso2c
+FROM country_copy
+ORDER BY name;
 """)
 
 ```
@@ -259,10 +257,9 @@ ORDER BY COUNT(*) DESC;
 ## in the first column.
 
 run_sql_and_return_html(cnx,"""
-SELECT country_short_name
-FROM wdi_country
-WHERE country_income_group IS NULL
-ORDER BY country_short_name;
+SELECT name
+FROM country_copy
+WHERE income IS NULL;
 """)
 
 ```
@@ -276,9 +273,9 @@ ORDER BY country_short_name;
 ## NOTE - if you get this wrong, all subsequent tables will be wrong!
 
 execute_ddl(cnx,"""
-UPDATE wdi_country
-SET country_income_group = 'High income'
-WHERE country_short_name = 'Equatorial Guinea';
+UPDATE country_copy
+SET income = 'High income'
+WHERE name = 'Venezuela';
 """)
 
 
@@ -287,9 +284,9 @@ WHERE country_short_name = 'Equatorial Guinea';
 ## Now, display the country again to verify the change stuck!
 
 run_sql_and_return_html(cnx,"""
-SELECT country_short_name, country_income_group
-FROM wdi_country
-WHERE country_short_name = 'Equatorial Guinea';
+SELECT name, income
+FROM country_copy
+WHERE name = 'Venezuela';
 """)
 ```
 
@@ -302,10 +299,10 @@ WHERE country_short_name = 'Equatorial Guinea';
 ## (skills: select, aggregate, group by, order by)
 
 run_sql_and_return_html(cnx,"""
-SELECT country_region, country_income_group, COUNT(*) AS "Number of Countries"
-FROM wdi_country
-GROUP BY country_region, country_income_group
-ORDER BY country_region, country_income_group;
+SELECT region, income, COUNT(*) AS country_count
+FROM country_copy
+GROUP BY region, income
+ORDER BY region, income;
 """)
 
 ```
@@ -356,11 +353,11 @@ ORDER BY country_region;
 ## (skills: select, aggregate, group by, nested query, order by, limit)
 
 run_sql_and_return_html(cnx,"""
-SELECT COUNT(*) AS "Number of Low Income Countries", country_region, country_income_group
-FROM wdi_country
-WHERE country_income_group = 'Low income'
-GROUP BY country_region, country_income_group
-ORDER BY COUNT(*) DESC
+SELECT region, COUNT(*) AS low_income_count
+FROM country_copy
+WHERE income = 'Low income'
+GROUP BY region
+ORDER BY low_income_count DESC
 LIMIT 1;
 """)
 
@@ -378,18 +375,15 @@ LIMIT 1;
 ## (skills: select, where, subquery)
 
 run_sql_and_return_html(cnx,"""
-SELECT country_code, country_short_name, country_region, country_income_group
-FROM wdi_country
-WHERE country_region = (
-    SELECT country_region
-    FROM wdi_country
-    WHERE country_code = 'MHL'
-) AND country_income_group = (
-    SELECT country_income_group
-    FROM wdi_country
-    WHERE country_code = 'MHL'
+SELECT name
+FROM country_copy
+WHERE region = (
+    SELECT region FROM country_copy WHERE name = 'Marshall Islands'
 )
-ORDER BY country_short_name;
+AND income = (
+    SELECT income FROM country_copy WHERE name = 'Marshall Islands'
+)
+AND name != 'Marshall Islands';
 """)
 
 ```
@@ -574,6 +568,11 @@ This project showed me that SQL is really useful for more than just pulling data
 
 
 # README
+
+A quality README is an important part of EVERY project. Using the Quarto *include* command we're including a copy of your README in the project report so that a human can evaluate it.
+
+Make sure that you edit the README so that it's explanatory!  Note that you don't need a readme within the *reports* folder for this assignment. We're only
+focused on the root *README.md*.
 
 [Here is some info](https://www.freecodecamp.org/news/how-to-write-a-good-readme-file/) on how to write a good README!
 
